@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#151b2c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WMS 订单">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <title>Trendyol WMS · 订单监控</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#192235;background:#f4f6fa}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh}button,input{font:inherit}
+    .shell{max-width:720px;margin:auto;padding:env(safe-area-inset-top) 16px calc(28px + env(safe-area-inset-bottom))}
+    header{background:#151b2c;color:white;padding:22px 0 34px;margin:0}
+    .head-inner{max-width:720px;margin:auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:12px}.mark{width:42px;height:42px;border-radius:14px;background:#fa6b35;display:grid;place-items:center;font-size:22px;font-weight:800}
+    h1{font-size:20px;margin:0;letter-spacing:.1px}header p{margin:3px 0 0;color:#b8c4d8;font-size:12px}
+    .ghost{border:1px solid #677289;background:none;color:white;padding:9px 12px;border-radius:10px;cursor:pointer}
+    .card{background:#fff;border:1px solid #e5e9f0;border-radius:18px;box-shadow:0 8px 28px rgba(33,49,76,.06)}
+    #loginCard{margin:-16px 0 0;padding:22px}#loginCard h2{margin:0 0 5px;font-size:21px}#loginCard p{color:#657185;font-size:13px;line-height:1.6;margin:0 0 20px}
+    label{display:block;color:#43516a;font-size:13px;font-weight:650;margin:14px 0 6px}
+    input{width:100%;border:1px solid #cdd5e2;border-radius:11px;padding:13px 14px;background:white;color:#192235;outline:none}
+    input:focus{border-color:#fa6b35;box-shadow:0 0 0 3px #fa6b3522}
+    .primary{width:100%;border:0;border-radius:11px;background:#fa6b35;color:white;font-weight:750;padding:14px;margin-top:20px;cursor:pointer}
+    #dashboard{display:none;margin-top:-16px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}
+    .stat{padding:16px 12px}.stat strong{display:block;font-size:25px}.stat span{display:block;color:#6c788a;font-size:11px;margin-top:2px}
+    .toolbar{padding:15px;margin-bottom:12px}.toolbar-top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}
+    .toolbar h2{font-size:17px;margin:0}.meta{font-size:11px;color:#728096;text-align:right;line-height:1.5}
+    .actions{display:flex;gap:8px}.actions input{min-width:0;flex:1}.refresh{border:1px solid #d6dce8;background:#fff;border-radius:10px;padding:0 14px;font-weight:700;color:#293957;cursor:pointer}
+    .filters{display:flex;gap:8px;overflow-x:auto;padding:2px 0 5px;scrollbar-width:none}.filters button{flex:none;border:1px solid #dce2eb;background:#fff;color:#526179;border-radius:999px;padding:8px 13px;cursor:pointer;font-size:12px}
+    .filters button.active{background:#202b45;color:white;border-color:#202b45}
+    .order{padding:16px;margin:10px 0}.order-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .order-no{font-size:17px;font-weight:800;word-break:break-all}.badge{font-size:11px;font-weight:800;border-radius:999px;padding:6px 9px;background:#eaf0fa;color:#31507e;white-space:nowrap}
+    .badge.new{background:#fff0d9;color:#925e00}.badge.done{background:#e4f6ed;color:#17754b}.badge.cancel{background:#fce9e8;color:#a1322d}
+    .rows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.detail small{display:block;color:#8390a3;font-size:11px;margin-bottom:3px}.detail span{font-size:13px;font-weight:600;overflow-wrap:anywhere}
+    .empty{padding:30px 18px;text-align:center;color:#69778b;font-size:14px}.error{color:#ac3333;font-size:13px;min-height:18px;margin:10px 0 0}
+    .note{font-size:12px;color:#8994a6;text-align:center;line-height:1.5;margin:18px 8px}
+  </style>
+</head>
+<body>
+  <header><div class="head-inner"><div class="brand"><div class="mark">T</div><div><h1>Trendyol WMS</h1><p>订单监控 · 只读</p></div></div><button id="logout" class="ghost" hidden>退出</button></div></header>
+  <main class="shell">
+    <form id="loginCard" class="card">
+      <h2>查看店铺订单</h2><p>使用电脑端 WMS 的云端库存账号登录。手机端不需要 Trendyol API 密钥。</p>
+      <label for="email">店铺邮箱</label><input id="email" type="email" autocomplete="username" required>
+      <label for="password">密码</label><input id="password" type="password" autocomplete="current-password" required>
+      <button id="loginButton" class="primary" type="submit">登录并查看</button><div id="loginError" class="error" role="alert"></div>
+    </form>
+    <section id="dashboard">
+      <div class="stats"><div class="card stat"><strong id="total">0</strong><span>显示订单</span></div><div class="card stat"><strong id="open">0</strong><span>待处理</span></div><div class="card stat"><strong id="sent">0</strong><span>已发出</span></div></div>
+      <div class="card toolbar"><div class="toolbar-top"><h2>订单列表</h2><div id="updated" class="meta">尚未读取</div></div><div class="actions"><input id="search" type="search" placeholder="搜索订单号、包裹或运单"><button id="refresh" class="refresh">刷新</button></div></div>
+      <div id="filters" class="filters"><button class="active" data-filter="all">全部</button><button data-filter="open">待处理</button><button data-filter="sent">已发出</button><button data-filter="cancel">已取消</button></div>
+      <div id="orders"></div><p class="note">订单由电脑端 WMS 同步到云端；此页面每分钟自动检查一次。以 Trendyol Seller Panel 为最终状态。</p>
+    </section>
+  </main>
+  <script>
+    const KEY = "sb_publishable_uogqQCUxDk9fz4C2wapJuw_iN8k5dY8";
+    const PROJECT = "https://vudkqbppqsifncxkfhws.supabase.co";
+    const ROOT = PROJECT + "/functions/v1/wms-mobile";
+    const $ = id => document.getElementById(id);
+    let session = null, orders = [], filter = "all";
+    const openStates = new Set(["created","picking","invoiced"]);
+    const sentStates = new Set(["shipped","delivered"]);
+    const cancelStates = new Set(["cancelled","unsupplied","unpacked"]);
+
+    function readSession(){try{return JSON.parse(localStorage.getItem("wms-mobile-session") || "null")}catch{return null}}
+    function saveSession(value){session=value;value?localStorage.setItem("wms-mobile-session",JSON.stringify(value)):localStorage.removeItem("wms-mobile-session")}
+    function showDashboard(on){$("loginCard").style.display=on?"none":"block";$("dashboard").style.display=on?"block":"none";$("logout").hidden=!on}
+    async function authRequest(path,body){const res=await fetch(PROJECT+path,{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw Error(data.msg||data.error_description||"登录失败");return data}
+    async function ensureToken(){
+      if(!session)throw Error("请先登录");
+      if(Date.now() < session.expires_at-60000)return session.access_token;
+      const next=await authRequest("/auth/v1/token?grant_type=refresh_token",{refresh_token:session.refresh_token});
+      saveSession({access_token:next.access_token,refresh_token:next.refresh_token,expires_at:Date.now()+next.expires_in*1000});return session.access_token;
+    }
+    function statusType(s){s=(s||"").toLowerCase();return openStates.has(s)?"open":sentStates.has(s)?"sent":cancelStates.has(s)?"cancel":"other"}
+    function statusLabel(s){return ({Created:"新订单",Picking:"拣货中",Invoiced:"待发出",Shipped:"已发出",Delivered:"已送达",Cancelled:"已取消",UnSupplied:"未供货",UnPacked:"未打包"})[s]||s||"未知"}
+    function addDetail(parent,label,value){const box=document.createElement("div");box.className="detail";const small=document.createElement("small");small.textContent=label;const span=document.createElement("span");span.textContent=value||"—";box.append(small,span);parent.append(box)}
+    function render(){
+      const term=$("search").value.trim().toLowerCase();const visible=orders.filter(o=>(filter==="all"||statusType(o.status)===filter)&&(!term||[o.order_no,o.package_id,o.tracking].some(v=>String(v||"").toLowerCase().includes(term))));
+      $("total").textContent=orders.length;$("open").textContent=orders.filter(o=>statusType(o.status)==="open").length;$("sent").textContent=orders.filter(o=>statusType(o.status)==="sent").length;
+      const host=$("orders");host.replaceChildren();if(!visible.length){const empty=document.createElement("div");empty.className="card empty";empty.textContent=orders.length?"没有符合条件的订单":"还没有同步到手机端的订单。请先在电脑端打开 WMS 并同步 Trendyol。";host.append(empty);return}
+      for(const o of visible){const card=document.createElement("article");card.className="card order";const top=document.createElement("div");top.className="order-top";const no=document.createElement("div");no.className="order-no";no.textContent="#"+(o.order_no||o.package_id);const badge=document.createElement("span");badge.className="badge "+(statusType(o.status)==="open"?"new":statusType(o.status)==="sent"?"done":statusType(o.status)==="cancel"?"cancel":"");badge.textContent=statusLabel(o.status);top.append(no,badge);const rows=document.createElement("div");rows.className="rows";addDetail(rows,"下单时间",o.order_date);addDetail(rows,"商品件数",String(o.item_count||0));addDetail(rows,"订单金额",Number.isFinite(Number(o.total))?"₺"+new Intl.NumberFormat("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(o.total)):"—");addDetail(rows,"运单号",o.tracking);addDetail(rows,"物流公司",o.cargo);card.append(top,rows);host.append(card)}
+    }
+    async function loadOrders(){
+      $("refresh").disabled=true;$("updated").textContent="正在更新…";
+      try{const token=await ensureToken();const res=await fetch(ROOT+"/orders",{headers:{Authorization:"Bearer "+token,apikey:KEY},cache:"no-store"});if(res.status===401){saveSession(null);showDashboard(false);throw Error("登录已过期，请重新登录")};if(!res.ok)throw Error("读取失败（"+res.status+"）");orders=await res.json();const latest=orders.map(o=>Date.parse(o.synced_at||"")).filter(Number.isFinite);$("updated").textContent=latest.length?"云端同步："+new Date(Math.max(...latest)).toLocaleString():"暂无云端订单";render()}
+      catch(e){$("updated").textContent=e.message}finally{$("refresh").disabled=false}
+    }
+    $("loginCard").addEventListener("submit",async e=>{e.preventDefault();$("loginError").textContent="";$("loginButton").disabled=true;try{const data=await authRequest("/auth/v1/token?grant_type=password",{email:$("email").value.trim(),password:$("password").value});saveSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000});$("password").value="";showDashboard(true);await loadOrders()}catch(err){$("loginError").textContent=err.message}finally{$("loginButton").disabled=false}});
+    $("logout").addEventListener("click",()=>{saveSession(null);orders=[];showDashboard(false)});$("refresh").addEventListener("click",loadOrders);$("search").addEventListener("input",render);
+    $("filters").addEventListener("click",e=>{const button=e.target.closest("button[data-filter]");if(!button)return;filter=button.dataset.filter;for(const item of $("filters").querySelectorAll("button"))item.classList.toggle("active",item===button);render()});
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden&&session)loadOrders()});setInterval(()=>{if(!document.hidden&&session)loadOrders()},60000);
+    session=readSession();showDashboard(!!session);if(session)loadOrders();
+  </script>
+</body>
+</html>
