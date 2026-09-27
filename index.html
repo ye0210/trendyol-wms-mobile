@@ -25,6 +25,7 @@
     label{display:block;color:#43516a;font-size:13px;font-weight:650;margin:14px 0 6px}
     input{width:100%;border:1px solid #cdd5e2;border-radius:11px;padding:13px 14px;background:white;color:#192235;outline:none}
     input:focus{border-color:#fa6b35;box-shadow:0 0 0 3px #fa6b3522}
+    .remember{display:flex;align-items:center;gap:9px;margin-top:16px;cursor:pointer}.remember input{width:18px;height:18px;accent-color:#fa6b35}#loginCard .remember-note{font-size:11px;color:#8390a3;line-height:1.4;margin:4px 0 0 27px}
     .primary{width:100%;border:0;border-radius:11px;background:#fa6b35;color:white;font-weight:750;padding:14px;margin-top:20px;cursor:pointer}
     #dashboard{display:none;margin-top:-16px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}
     .stat{padding:16px 12px}.stat strong{display:block;font-size:25px}.stat span{display:block;color:#6c788a;font-size:11px;margin-top:2px}
@@ -48,6 +49,8 @@
       <h2>查看店铺订单</h2><p>使用电脑端 WMS 的云端库存账号登录。手机端不需要 Trendyol API 密钥。</p>
       <label for="email">店铺邮箱</label><input id="email" type="email" autocomplete="username" required>
       <label for="password">密码</label><input id="password" type="password" autocomplete="current-password" required>
+      <label class="remember" for="remember"><input id="remember" type="checkbox"><span>记住密码</span></label>
+      <p class="remember-note">勾选后下次自动登录；不会在网页中保存明文密码。</p>
       <button id="loginButton" class="primary" type="submit">登录并查看</button><div id="loginError" class="error" role="alert"></div>
     </form>
     <section id="dashboard">
@@ -67,8 +70,8 @@
     const sentStates = new Set(["shipped","delivered"]);
     const cancelStates = new Set(["cancelled","unsupplied","unpacked"]);
 
-    function readSession(){try{return JSON.parse(localStorage.getItem("wms-mobile-session") || "null")}catch{return null}}
-    function saveSession(value){session=value;value?localStorage.setItem("wms-mobile-session",JSON.stringify(value)):localStorage.removeItem("wms-mobile-session")}
+    function readSession(){try{const saved=JSON.parse(localStorage.getItem("wms-mobile-session") || "null");$("remember").checked=!!saved;return saved}catch{localStorage.removeItem("wms-mobile-session");return null}}
+    function saveSession(value){session=value;if(value&&$("remember").checked)localStorage.setItem("wms-mobile-session",JSON.stringify(value));else localStorage.removeItem("wms-mobile-session")}
     function showDashboard(on){$("loginCard").style.display=on?"none":"block";$("dashboard").style.display=on?"block":"none";$("logout").hidden=!on}
     async function authRequest(path,body){const res=await fetch(PROJECT+path,{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw Error(data.msg||data.error_description||"登录失败");return data}
     async function ensureToken(){
@@ -91,11 +94,11 @@
       try{const token=await ensureToken();const res=await fetch(ROOT+"/orders",{headers:{Authorization:"Bearer "+token,apikey:KEY},cache:"no-store"});if(res.status===401){saveSession(null);showDashboard(false);throw Error("登录已过期，请重新登录")};if(!res.ok)throw Error("读取失败（"+res.status+"）");orders=await res.json();const latest=orders.map(o=>Date.parse(o.synced_at||"")).filter(Number.isFinite);$("updated").textContent=latest.length?"云端同步："+new Date(Math.max(...latest)).toLocaleString():"暂无云端订单";render()}
       catch(e){$("updated").textContent=e.message}finally{$("refresh").disabled=false}
     }
-    $("loginCard").addEventListener("submit",async e=>{e.preventDefault();$("loginError").textContent="";$("loginButton").disabled=true;try{const data=await authRequest("/auth/v1/token?grant_type=password",{email:$("email").value.trim(),password:$("password").value});saveSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000});$("password").value="";showDashboard(true);await loadOrders()}catch(err){$("loginError").textContent=err.message}finally{$("loginButton").disabled=false}});
+    $("loginCard").addEventListener("submit",async e=>{e.preventDefault();$("loginError").textContent="";$("loginButton").disabled=true;try{const email=$("email").value.trim();const data=await authRequest("/auth/v1/token?grant_type=password",{email,password:$("password").value});localStorage.setItem("wms-mobile-email",email);saveSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000});$("password").value="";showDashboard(true);await loadOrders()}catch(err){$("loginError").textContent=err.message}finally{$("loginButton").disabled=false}});
     $("logout").addEventListener("click",()=>{saveSession(null);orders=[];showDashboard(false)});$("refresh").addEventListener("click",loadOrders);$("search").addEventListener("input",render);
     $("filters").addEventListener("click",e=>{const button=e.target.closest("button[data-filter]");if(!button)return;filter=button.dataset.filter;for(const item of $("filters").querySelectorAll("button"))item.classList.toggle("active",item===button);render()});
     document.addEventListener("visibilitychange",()=>{if(!document.hidden&&session)loadOrders()});setInterval(()=>{if(!document.hidden&&session)loadOrders()},60000);
-    session=readSession();showDashboard(!!session);if(session)loadOrders();
+    $("email").value=localStorage.getItem("wms-mobile-email")||"";session=readSession();showDashboard(!!session);if(session)loadOrders();
   </script>
 </body>
 </html>
